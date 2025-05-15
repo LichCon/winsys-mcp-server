@@ -39,6 +39,7 @@ try:
         kCGWindowImageDefault,
         kCGWindowListExcludeDesktopElements,
         kCGWindowListOptionAll,
+        kCGWindowListOptionIncludingWindow,
         kCGWindowListOptionOnScreenOnly,
     )
 except ImportError as e:
@@ -126,7 +127,7 @@ def list_windows(exclude_zero_area: bool = True, only_on_screen: bool = True) ->
 @mcp.tool()
 def take_window_screenshot(window_id: int) -> McpImage:
     """
-    Take a screenshot of a specific window.
+    Take a screenshot of a specific window, even if it's hidden behind other windows.
 
     Args:
         window_id: The ID of the window to capture.
@@ -139,7 +140,7 @@ def take_window_screenshot(window_id: int) -> McpImage:
         # Create a screenshot of the specified window
         image_ref = CGWindowListCreateImage(
             CGRectNull,  # Null rect means capture the entire window
-            kCGWindowListOptionAll,
+            kCGWindowListOptionIncludingWindow,  # Changed from kCGWindowListOptionAll
             window_id,  # The specific window ID to capture
             kCGWindowImageDefault,
         )
