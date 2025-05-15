@@ -1,7 +1,11 @@
 [project]
 name = "winsys-mcp-server"
 version = "0.1.0"
-description = "Add your description here"
+description = "MCP server to allow LLMs to interact with OS window systems"
 readme = "README.md"
-requires-python = ">=3.9"
-dependencies = []
+requires-python = ">=3.13"
+dependencies = [
+    "mcp[cli]",
+    "pyobjc-framework-Quartz",
+    "Pillow",
+]
