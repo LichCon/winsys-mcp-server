@@ -9,3 +9,8 @@ dependencies = [
     "pyobjc-framework-Quartz",
     "Pillow",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.11.0",
+]
