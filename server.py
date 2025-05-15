@@ -1,4 +1,3 @@
-import logging
 import os
 import sys
 from io import BytesIO
@@ -37,23 +36,25 @@ except ImportError as e:
     sys.exit(1)
 
 # Import MCP SDK for server implementation
+import logging
+
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.fastmcp import Image as McpImage
+
+# Set up minimal logging for errors only
+logging.basicConfig(
+    level=logging.ERROR,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+
+logger = logging.getLogger("winsys-mcp-server")
 
 from server_shutdown import ShutdownReason, shutdown_manager
 
 # Import shutdown handling utilities
 from signal_handler import graceful_shutdown
 from transport_handlers import sse_handler, stdio_handler
-
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
-)
-
-logger = logging.getLogger("winsys-mcp-server")
 
 # Create MCP server
 mcp = FastMCP(
@@ -148,6 +149,7 @@ def take_window_screenshot(window_id: int) -> McpImage:
         return McpImage(data=png_bytes, format="png")
     
     except Exception as e:
+        logger.error(f"Error taking screenshot: {str(e)}")
         return f"Error taking screenshot: {str(e)}"
 
 @mcp.tool()
@@ -184,6 +186,7 @@ def take_fullscreen_screenshot() -> McpImage:
         return McpImage(data=png_bytes, format="png")
     
     except Exception as e:
+        logger.error(f"Error taking screenshot: {str(e)}")
         return f"Error taking screenshot: {str(e)}"
 
 @mcp.tool()
@@ -243,8 +246,6 @@ def _register_transport_streams(transport_type, *args):
         transport_type: The type of transport being used
         *args: Transport-specific stream objects
     """
-    logger.debug(f"Registering {transport_type} transport streams")
-    
     if transport_type == "stdio" and len(args) >= 2:
         # Register stdio streams
         read_stream, write_stream = args[:2]
@@ -268,18 +269,15 @@ def run_with_shutdown(*args, **kwargs):
     """
     # Set up signal handlers
     graceful_shutdown.setup_signal_handlers()
-    logger.info("Signal handlers registered for graceful shutdown")
     
     # Extract transport type
     transport = kwargs.get('transport', 'stdio')
-    logger.info(f"Starting server with {transport} transport")
     
     try:
         # Call original run method
         result = original_run(*args, **kwargs)
         return result
     except KeyboardInterrupt:
-        logger.info("Keyboard interrupt received")
         # Handle KeyboardInterrupt gracefully
         import asyncio
         asyncio.run(shutdown_manager.shutdown(ShutdownReason.SIGNAL))
@@ -292,7 +290,6 @@ def run_with_shutdown(*args, **kwargs):
     finally:
         # Restore signal handlers
         graceful_shutdown.restore_signal_handlers()
-        logger.info("Signal handlers restored")
 
 # Replace run method with our wrapped version
 mcp.run = run_with_shutdown
@@ -300,23 +297,17 @@ mcp.run = run_with_shutdown
 # Add cleanup function for graceful shutdown
 def cleanup():
     """Perform clean-up operations before shutdown."""
-    logger.info("Cleaning up resources before shutdown")
-    # Add any additional cleanup steps here
+    pass  # No logging needed
 
 # Register cleanup with shutdown manager
 shutdown_manager.register_pre_shutdown_hook(cleanup)
 
 def main():
     """Main entry point for the MCP server."""
-    logger.info("Starting Window Manager MCP server...")
-    
     # Detect if a transport type is specified as command-line argument
     transport = "stdio"  # Default
     if len(sys.argv) > 1 and sys.argv[1] in ["stdio", "sse", "streamable-http"]:
         transport = sys.argv[1]
-    
-    # Run the server with the specified transport
-    logger.info(f"Using {transport} transport")
     
     try:
         if transport == "sse":

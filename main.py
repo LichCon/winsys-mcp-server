@@ -3,9 +3,9 @@ import sys
 
 from server import main as server_main
 
-# Set up root logger
+# Set up minimal logging for errors only
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.ERROR,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()]
 )
@@ -19,13 +19,10 @@ def main():
     This function serves as a wrapper around the server's main function,
     providing additional setup, argument processing, and error handling.
     """
-    logger.info("Starting winsys-mcp-server")
-    
     try:
         # Pass along any command line arguments
         server_main()
     except KeyboardInterrupt:
-        logger.info("Keyboard interrupt received. Exiting gracefully.")
         sys.exit(0)
     except Exception as e:
         logger.error(f"Error running server: {e}")

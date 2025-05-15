@@ -31,8 +31,6 @@ class GracefulShutdown:
         signal.signal(signal.SIGINT, self._handle_shutdown_signal)
         signal.signal(signal.SIGTERM, self._handle_shutdown_signal)
         
-        logger.info("Signal handlers for graceful shutdown have been set up")
-    
     def _handle_shutdown_signal(self, sig: int, frame: Optional[FrameType]):
         """
         Handle termination signals (SIGINT, SIGTERM).
@@ -45,13 +43,12 @@ class GracefulShutdown:
         
         if self._is_shutting_down:
             # If we're already shutting down, another signal means force exit
-            logger.warning(f"Received {sig_name} again during shutdown. Forcing exit.")
+            logger.error(f"Received {sig_name} again during shutdown. Forcing exit.")
             # Restore original handler and re-raise signal
             signal.signal(sig, self.original_handlers[sig])
             signal.raise_signal(sig)
             return
             
-        logger.info(f"Received {sig_name} signal. Starting graceful shutdown...")
         self._is_shutting_down = True
         
         # Set asyncio event to coordinate shutdown across async code
@@ -79,13 +76,11 @@ class GracefulShutdown:
             hook: Callable that will be executed during shutdown
         """
         self._shutdown_hooks[name] = hook
-        logger.debug(f"Registered shutdown hook: {name}")
     
     def _run_shutdown_hooks(self):
         """Run all registered shutdown hooks."""
         for name, hook in self._shutdown_hooks.items():
             try:
-                logger.debug(f"Running shutdown hook: {name}")
                 hook()
             except Exception as e:
                 logger.error(f"Error in shutdown hook {name}: {e}")

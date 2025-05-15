@@ -24,8 +24,6 @@ class TransportShutdownHandler:
         shutdown_manager.register_transport_shutdown_hook(
             transport_name, self.handle_shutdown
         )
-        
-        logger.debug(f"Registered {transport_name} shutdown handler")
     
     def register_shutdown_callback(self, name: str, callback: Callable):
         """
@@ -36,17 +34,12 @@ class TransportShutdownHandler:
             callback: Function to call during shutdown
         """
         self._shutdown_callbacks[name] = callback
-        logger.debug(f"Registered {self.transport_name} shutdown callback: {name}")
     
     async def handle_shutdown(self):
         """Handle transport-specific shutdown. Override in subclasses."""
-        logger.info(f"Handling shutdown for {self.transport_name} transport")
-        
         # Call all registered callbacks
         for name, callback in self._shutdown_callbacks.items():
             try:
-                logger.debug(f"Running {self.transport_name} shutdown callback: {name}")
-                
                 result = callback()
                 if asyncio.iscoroutine(result):
                     await result
@@ -73,7 +66,6 @@ class StdioTransportHandler(TransportShutdownHandler):
         """
         self.read_stream = read_stream
         self.write_stream = write_stream
-        logger.debug("Set stdio streams")
     
     async def handle_shutdown(self):
         """
@@ -82,8 +74,6 @@ class StdioTransportHandler(TransportShutdownHandler):
         This method specifically addresses the BrokenResourceError that occurs
         when shutting down stdio streams.
         """
-        logger.info("Handling stdio transport shutdown")
-        
         # Call parent method to run registered callbacks
         await super().handle_shutdown()
         
@@ -92,24 +82,20 @@ class StdioTransportHandler(TransportShutdownHandler):
             with contextlib.suppress(Exception):
                 if hasattr(self.write_stream, 'aclose') and callable(getattr(self.write_stream, 'aclose')):
                     try:
-                        logger.debug("Closing stdio write stream")
                         await self.write_stream.aclose()
                     except Exception as e:
-                        logger.debug(f"Ignoring expected error during stdio write stream close: {e}")
+                        pass  # Suppress expected errors
                 elif hasattr(self.write_stream, 'close') and callable(getattr(self.write_stream, 'close')):
-                    logger.debug("Closing stdio write stream")
                     self.write_stream.close()
         
         if self.read_stream:
             with contextlib.suppress(Exception):
                 if hasattr(self.read_stream, 'aclose') and callable(getattr(self.read_stream, 'aclose')):
                     try:
-                        logger.debug("Closing stdio read stream")
                         await self.read_stream.aclose()
                     except Exception as e:
-                        logger.debug(f"Ignoring expected error during stdio read stream close: {e}")
+                        pass  # Suppress expected errors
                 elif hasattr(self.read_stream, 'close') and callable(getattr(self.read_stream, 'close')):
-                    logger.debug("Closing stdio read stream")
                     self.read_stream.close()
 
 class SseTransportHandler(TransportShutdownHandler):
@@ -129,7 +115,6 @@ class SseTransportHandler(TransportShutdownHandler):
             session_obj: Session object to be closed during shutdown
         """
         self.active_sessions[session_id] = session_obj
-        logger.debug(f"Registered SSE session: {session_id}")
     
     def remove_session(self, session_id: str):
         """
@@ -140,7 +125,6 @@ class SseTransportHandler(TransportShutdownHandler):
         """
         if session_id in self.active_sessions:
             del self.active_sessions[session_id]
-            logger.debug(f"Removed SSE session: {session_id}")
     
     async def handle_shutdown(self):
         """
@@ -149,8 +133,6 @@ class SseTransportHandler(TransportShutdownHandler):
         This manages the graceful closing of SSE connections and proper
         notification to clients.
         """
-        logger.info("Handling SSE transport shutdown")
-        
         # Call parent method to run registered callbacks
         await super().handle_shutdown()
         
@@ -158,8 +140,6 @@ class SseTransportHandler(TransportShutdownHandler):
         close_tasks = []
         for session_id, session in self.active_sessions.items():
             try:
-                logger.debug(f"Closing SSE session: {session_id}")
-                
                 # Send a close notification if possible
                 if hasattr(session, 'send_close_notification') and callable(getattr(session, 'send_close_notification')):
                     try:
@@ -167,7 +147,7 @@ class SseTransportHandler(TransportShutdownHandler):
                         if asyncio.iscoroutine(notify_task):
                             close_tasks.append(asyncio.create_task(notify_task))
                     except Exception as e:
-                        logger.debug(f"Error sending close notification to session {session_id}: {e}")
+                        pass  # Suppress expected errors
                 
                 # Close the session
                 if hasattr(session, 'close') and callable(getattr(session, 'close')):
@@ -183,7 +163,7 @@ class SseTransportHandler(TransportShutdownHandler):
             try:
                 await asyncio.wait(close_tasks, timeout=3.0)
             except asyncio.TimeoutError:
-                logger.warning("Timed out waiting for SSE sessions to close")
+                pass  # Suppress timeout error
             except Exception as e:
                 logger.error(f"Error waiting for SSE sessions to close: {e}")
 

@@ -66,7 +66,6 @@ class ServerShutdownManager:
             conn_obj: The connection object
         """
         self.active_connections[conn_id] = conn_obj
-        logger.debug(f"Added active connection: {conn_id}")
     
     def remove_active_connection(self, conn_id: str):
         """
@@ -77,7 +76,6 @@ class ServerShutdownManager:
         """
         if conn_id in self.active_connections:
             del self.active_connections[conn_id]
-            logger.debug(f"Removed active connection: {conn_id}")
     
     def register_pre_shutdown_hook(self, hook: Callable):
         """
@@ -120,7 +118,7 @@ class ServerShutdownManager:
             True if shutdown completed successfully, False otherwise
         """
         if self.status != ShutdownStatus.NOT_STARTED:
-            logger.warning(f"Shutdown already in progress with status {self.status}")
+            logger.error(f"Shutdown already in progress with status {self.status}")
             return False
         
         self.status = ShutdownStatus.IN_PROGRESS
@@ -128,12 +126,9 @@ class ServerShutdownManager:
         timeout = timeout or self.default_timeout
         
         try:
-            logger.info(f"Starting graceful shutdown. Reason: {reason.name}, Timeout: {timeout}s")
-            
             # Run pre-shutdown hooks
             for hook in self._pre_shutdown_hooks:
                 try:
-                    logger.debug(f"Running pre-shutdown hook: {hook.__name__}")
                     result = hook()
                     # Handle both regular and coroutine functions
                     if asyncio.iscoroutine(result):
@@ -147,7 +142,6 @@ class ServerShutdownManager:
             # Run transport-specific shutdown hooks
             for transport_name, hook in self._transport_shutdown_hooks.items():
                 try:
-                    logger.debug(f"Running transport shutdown hook for {transport_name}")
                     result = hook()
                     if asyncio.iscoroutine(result):
                         await result
@@ -157,7 +151,6 @@ class ServerShutdownManager:
             # Run post-shutdown hooks
             for hook in self._post_shutdown_hooks:
                 try:
-                    logger.debug(f"Running post-shutdown hook: {hook.__name__}")
                     result = hook()
                     if asyncio.iscoroutine(result):
                         await result
@@ -165,13 +158,12 @@ class ServerShutdownManager:
                     logger.error(f"Error in post-shutdown hook {hook.__name__}: {e}")
             
             self.status = ShutdownStatus.COMPLETED
-            logger.info("Graceful shutdown completed successfully")
             return True
             
         except asyncio.TimeoutError:
             self.status = ShutdownStatus.FORCED
             self.exit_code = 1
-            logger.warning(f"Shutdown timed out after {timeout}s")
+            logger.error(f"Shutdown timed out after {timeout}s")
             return False
         except Exception as e:
             self.status = ShutdownStatus.FAILED
@@ -189,7 +181,6 @@ class ServerShutdownManager:
         if not self.active_connections:
             return
         
-        logger.info(f"Closing {len(self.active_connections)} active connections")
         close_tasks = []
         
         for conn_id, conn in self.active_connections.items():
@@ -198,7 +189,6 @@ class ServerShutdownManager:
                     close_method = conn.close()
                     if asyncio.iscoroutine(close_method):
                         close_tasks.append(asyncio.create_task(close_method))
-                    logger.debug(f"Scheduled connection close: {conn_id}")
                 except Exception as e:
                     logger.error(f"Error scheduling close for connection {conn_id}: {e}")
         
@@ -206,7 +196,7 @@ class ServerShutdownManager:
             done, pending = await asyncio.wait(close_tasks, timeout=timeout)
             
             if pending:
-                logger.warning(f"{len(pending)} connection close operations timed out")
+                logger.error(f"{len(pending)} connection close operations timed out")
                 for task in pending:
                     task.cancel()
     
@@ -221,7 +211,7 @@ class ServerShutdownManager:
         shutdown_timeout = self.default_timeout * 1.5  # Give a bit extra time
         
         def force_exit():
-            logger.critical("Forcing exit after shutdown timeout")
+            logger.error("Forcing exit after shutdown timeout")
             sys.exit(1)
         
         loop.call_later(shutdown_timeout, force_exit)
