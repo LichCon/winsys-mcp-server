@@ -7,18 +7,20 @@ and finding windows by title.
 """
 
 import sys
+from typing import TypeVar, cast
+
+from mcp.server.fastmcp import Image as McpImage
+
+from mcp_shared import logger, mcp
 
 # Check if we're on macOS
 if sys.platform != "darwin":
     print("Error: This MCP server is only compatible with macOS.")
     sys.exit(1)
 
-# Import MCP SDK for server implementation
-import logging
-from typing import TypeVar, cast
-
-from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp import Image as McpImage
+# Import interaction tools so that their MCP tools are registered. This import
+# must occur *after* mcp is created to avoid circular import issues.
+import interaction_tools  # noqa: F401
 
 # Import shutdown handling utilities
 from server_shutdown import ShutdownReason, shutdown_manager
@@ -43,25 +45,9 @@ try:
         kCGWindowListOptionOnScreenOnly,
     )
 except ImportError as e:
-    print(f"Error importing macOS libraries: {e}")
-    print("Please ensure pyobjc-framework-Quartz is installed.")
-    sys.exit(1)
+    raise ImportError(f"Failed to import required macOS frameworks: {e}") from e
 
-# Set up minimal logging for errors only
-logging.basicConfig(
-    level=logging.ERROR,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
-
-logger = logging.getLogger("winsys-mcp-server")
-
-# Create MCP server
-mcp = FastMCP(
-    "WindowManager",
-    description="MCP server for interacting with OS window systems",
-    dependencies=["pyobjc-framework-Quartz", "Pillow"],
-)
+# NOTE: logger and mcp are now provided by mcp_shared
 
 
 @mcp.tool()
