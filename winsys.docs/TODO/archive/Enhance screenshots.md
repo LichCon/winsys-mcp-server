@@ -1,0 +1,1 @@
+Add functionality to take screenshots of individual displays. Right now fullscreen screenshot takes screenshot of whole screen making it more difficult for llm to analyse relevant window
