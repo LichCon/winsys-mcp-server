@@ -6,6 +6,7 @@ the macOS window system, including listing windows, taking screenshots,
 and finding windows by title.
 """
 
+import json
 import sys
 from typing import TypeVar, cast
 
@@ -60,8 +61,9 @@ def list_windows(exclude_zero_area: bool = True, only_on_screen: bool = True) ->
         only_on_screen: If True, only windows currently on screen will be listed.
 
     Returns:
-        Formatted string containing window details including PID, Window ID,
-        position, size, and title.
+        JSON string (array) of window objects with keys:
+        pid, window_id, title, subtitle, bounds.
+        bounds is an object with: x, y, width, height.
 
     """
     # Set options for window listing
@@ -72,9 +74,7 @@ def list_windows(exclude_zero_area: bool = True, only_on_screen: bool = True) ->
     # Get window list
     window_list = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
 
-    # Format the result
-    result = "  PID  WinID  (x, y, w, h)           [Title] SubTitle\n"
-    result += "-----  -----  ---------------------  -------------------------------------------\n"
+    windows: list[dict[str, object]] = []
 
     for window in window_list:
         # Get window properties
@@ -83,10 +83,10 @@ def list_windows(exclude_zero_area: bool = True, only_on_screen: bool = True) ->
 
         # Get window bounds
         bounds = window.get("kCGWindowBounds", {})
-        x = bounds.get("X", 0)
-        y = bounds.get("Y", 0)
-        width = bounds.get("Width", 0)
-        height = bounds.get("Height", 0)
+        x = int(bounds.get("X", 0))
+        y = int(bounds.get("Y", 0))
+        width = int(bounds.get("Width", 0))
+        height = int(bounds.get("Height", 0))
 
         # Skip windows with zero area if requested
         if exclude_zero_area and (width == 0 or height == 0):
@@ -96,18 +96,22 @@ def list_windows(exclude_zero_area: bool = True, only_on_screen: bool = True) ->
         title = window.get("kCGWindowOwnerName", "")
         subtitle = window.get("kCGWindowName", "")
 
-        # Format the line - truncate subtitle if needed to fit line length
-        title_subtitle = f"[{title}] {subtitle}"
-        if len(title_subtitle) > 43:
-            title_subtitle = title_subtitle[:40] + "..."
-
-        # Format the line with proper line length
-        result += (
-            f"{pid:5d}  {win_id:5d}  ({x:4.0f}, {y:4.0f}, {width:4.0f}, {height:4.0f})  "
-            f"{title_subtitle}\n"
+        windows.append(
+            {
+                "pid": int(pid),
+                "window_id": int(win_id),
+                "title": str(title),
+                "subtitle": str(subtitle),
+                "bounds": {
+                    "x": x,
+                    "y": y,
+                    "width": width,
+                    "height": height,
+                },
+            }
         )
 
-    return result
+    return json.dumps(windows)
 
 
 @mcp.tool()
@@ -190,7 +194,7 @@ def take_fullscreen_screenshot() -> McpImage:
 
 
 @mcp.tool()
-def find_window_by_title(title_search: str) -> str:
+def find_windows_by_title(title_search: str) -> str:
     """
     Find windows by searching in their titles.
 
@@ -198,7 +202,9 @@ def find_window_by_title(title_search: str) -> str:
         title_search: Text to search for in window titles and application names.
 
     Returns:
-        Formatted string containing matching window details.
+        JSON string (array) of matching window objects with keys:
+        pid, window_id, title, subtitle, bounds.
+        bounds is an object with: x, y, width, height.
 
     """
     title_search = title_search.lower()
@@ -206,10 +212,8 @@ def find_window_by_title(title_search: str) -> str:
     # Get window list
     window_list = CGWindowListCopyWindowInfo(kCGWindowListOptionAll, kCGNullWindowID)
 
-    # Format the result
-    result = "  PID  WinID  (x, y, w, h)           [Title] SubTitle\n"
-    result += "-----  -----  ---------------------  -------------------------------------------\n"
-    matching_windows = False
+    # Build JSON result
+    matches: list[dict[str, object]] = []
 
     for window in window_list:
         # Get window properties
@@ -222,30 +226,24 @@ def find_window_by_title(title_search: str) -> str:
 
         # Check if the search term is in the title or subtitle
         if title_search in title.lower() or title_search in subtitle.lower():
-            matching_windows = True
-
             # Get window bounds
             bounds = window.get("kCGWindowBounds", {})
-            x = bounds.get("X", 0)
-            y = bounds.get("Y", 0)
-            width = bounds.get("Width", 0)
-            height = bounds.get("Height", 0)
+            x = int(bounds.get("X", 0))
+            y = int(bounds.get("Y", 0))
+            width = int(bounds.get("Width", 0))
+            height = int(bounds.get("Height", 0))
 
-            # Format the line - truncate subtitle if needed to fit line length
-            title_subtitle = f"[{title}] {subtitle}"
-            if len(title_subtitle) > 43:
-                title_subtitle = title_subtitle[:40] + "..."
-
-            # Format the line with proper line length
-            result += (
-                f"{pid:5d}  {win_id:5d}  ({x:4.0f}, {y:4.0f}, {width:4.0f}, {height:4.0f})  "
-                f"{title_subtitle}\n"
+            matches.append(
+                {
+                    "pid": int(pid),
+                    "window_id": int(win_id),
+                    "title": str(title),
+                    "subtitle": str(subtitle),
+                    "bounds": {"x": x, "y": y, "width": width, "height": height},
+                }
             )
 
-    if not matching_windows:
-        return f"No windows found with title containing '{title_search}'"
-
-    return result
+    return json.dumps(matches)
 
 
 # Register custom handlers for specific transports
