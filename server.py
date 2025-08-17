@@ -38,7 +38,7 @@ try:
         CGWindowListCreateImage,
         NSBitmapImageRep,
         kCGNullWindowID,
-        kCGWindowImageDefault,
+        kCGWindowImageBoundsIgnoreFraming,
         kCGWindowListExcludeDesktopElements,
         kCGWindowListOptionAll,
         kCGWindowListOptionIncludingWindow,
@@ -128,7 +128,7 @@ def take_window_screenshot(window_id: int) -> McpImage:
             CGRectNull,  # Null rect means capture the entire window
             kCGWindowListOptionIncludingWindow,  # Changed from kCGWindowListOptionAll
             window_id,  # The specific window ID to capture
-            kCGWindowImageDefault,
+            kCGWindowImageBoundsIgnoreFraming,
         )
 
         if not image_ref:
@@ -140,6 +140,10 @@ def take_window_screenshot(window_id: int) -> McpImage:
 
         # Convert to bytes and create an MCP Image
         png_bytes = bytes(png_data)
+
+        # Return JSON derived from ImageContent
+        # image_content = McpImage(data=png_bytes, format="png").to_image_content()
+        # return image_content.model_dump()
 
         # Return the image
         return McpImage(data=png_bytes, format="png")
@@ -164,7 +168,7 @@ def take_fullscreen_screenshot() -> McpImage:
             CGRectNull,  # Null rect means capture the entire screen
             kCGWindowListOptionOnScreenOnly,
             kCGNullWindowID,  # Null window ID means all windows
-            kCGWindowImageDefault,
+            kCGWindowImageBoundsIgnoreFraming,
         )
 
         if not image_ref:
