@@ -223,7 +223,7 @@ def click_at(
     x: int,
     y: int,
     button: str = "left",
-    window_id: int | None = None,
+    window_id: float | int | None = None,
 ) -> str:
     """
     Perform a mouse click at (x, y).
@@ -232,7 +232,8 @@ def click_at(
     Coordinates are relative to *window_id* if provided, else absolute.
     """
     try:
-        abs_x, abs_y = _to_abs(x, y, window_id)
+        window_id_int = int(window_id) if window_id is not None else None
+        abs_x, abs_y = _to_abs(x, y, window_id_int)
         _post_mouse_click(abs_x, abs_y, button)
         return "OK"
     except Exception as exc:  # pylint: disable=broad-exception-caught
