@@ -63,6 +63,9 @@ from mcp_shared import logger, mcp
 logger = logging.getLogger(__name__)  # noqa: F811
 logger.setLevel(logging.ERROR)
 
+# Maximum number of characters processed by type_text per call
+MAX_TYPE_TEXT_CHARS = 200
+
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
@@ -268,8 +271,13 @@ def type_text(text: str, window_id: int | None = None) -> str:
 
     A combined-session `CGEventSource` is used to make the events appear as if
     they originate from a real keyboard.
+
+    Processes at most 200 characters per call. If the input exceeds this limit,
+    an error is returned and no text is typed.
     """
     try:
+        if len(text) > MAX_TYPE_TEXT_CHARS:
+            return f"Error: type_text input exceeds {MAX_TYPE_TEXT_CHARS} characters"
         # Create a unified event source once per call
         source = CGEventSourceCreate(kCGEventSourceStateCombinedSessionState)
 
@@ -277,7 +285,9 @@ def type_text(text: str, window_id: int | None = None) -> str:
         if window_id is not None:
             _activate_app_for_window(window_id)
 
-        for ch in text:
+        limited_text = text[:MAX_TYPE_TEXT_CHARS]
+
+        for ch in limited_text:
             # Try realistic keycode first
             keycode = KEYCODES.get(ch.lower())
             if keycode is not None:

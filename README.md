@@ -69,11 +69,11 @@ These tools allow mouse, keyboard, and query-style interactions with the window 
 All coordinates are in pixels.
 
 | Tool                | Signature                                                     | Description                                                                 |
-| ------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `move_mouse`        | `(x: int, y: int, window_id: int                              | None = None)`                                                               | Move cursor. If `window_id` provided, coordinates are relative to that window. |
-| `click_at`          | `(x: int, y: int, button: str = "left", window_id: int        | None = None)`                                                               | Click at position.                                                             |
+| ------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `move_mouse`        | `(x: int, y: int, window_id: int                              | None = None)`                                                               | Move cursor. If `window_id` provided, coordinates are relative to that window.                                            |
+| `click_at`          | `(x: int, y: int, button: str = "left", window_id: int        | None = None)`                                                               | Click at position.                                                                                                        |
 | `drag`              | `(from_x, from_y, to_x, to_y, button="left", window_id=None)` | Drag from point A to B.                                                     |
-| `type_text`         | `(text: str, window_id: int                                   | None = None)`                                                               | Type Unicode text; window activated first if given.                            |
+| `type_text`         | `(text: str, window_id: int                                   | None = None)`                                                               | Type Unicode text (up to 200 characters per call; exceeding the limit returns an error); window activated first if given. |
 | `key_press`         | `(key: str, modifiers: list[str] = [])`                       | Press a single key with optional modifiers (`cmd`, `ctrl`, `alt`, `shift`). |
 | `get_window_bounds` | `(window_id: int)`                                            | Returns `{x, y, width, height}`.                                            |
 | `mouse_position`    | `()`                                                          | Returns current cursor coordinates `(x, y)`.                                |
